@@ -560,7 +560,7 @@ class TrainConfig:
 # Use `get_config` if you need to get a config by name in your code.
 _CONFIGS = [
     TrainConfig(
-        name="pi05_ur7e_lora",
+        name="pi05_ur7e_droid_lora",
         model=pi0_config.Pi0Config(
             pi05=True,
             action_horizon=50,
@@ -610,13 +610,69 @@ _CONFIGS = [
             action_expert_variant="gemma_300m_lora",
         ).get_freeze_filter(),
         ema_decay=None,
-        batch_size=1,
-        num_train_steps=10_000,
+        batch_size=4,
+        num_train_steps=30_000,
     ),
+
+TrainConfig(
+        name="pi05_ur7e_base_lora",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_horizon=50,
+            discrete_state_input=False,
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+        ),
+        data=SimpleDataConfig(
+            repo_id="dataset0924",
+            data_transforms=lambda model: _transforms.Group(
+                inputs=[
+                    _transforms.DeltaActions(_transforms.make_bool_mask(6, -1)),
+                    ur7e_policy.UR7EInputs(model_type=model.model_type),
+                ],
+                outputs=[
+                    ur7e_policy.UR7EOutputs(),
+                    _transforms.AbsoluteActions(_transforms.make_bool_mask(6, -1)),
+                ],
+            ),
+            model_transforms=ModelTransformFactory(default_prompt="UR7E pick and place"),
+            base_config=DataConfig(
+                repack_transforms=_transforms.Group(
+                    inputs=[
+                        _transforms.RepackTransform(
+                            {
+                                "images": {
+                                    "cam_high": "observation.images.camera_0",
+                                    "cam_low": "observation.images.camera_1",
+                                },
+                                "state": "observation.state",
+                                "actions": "action",
+                                "prompt": "prompt",
+                            }
+                        )
+                    ]
+                ),
+                action_sequence_keys=("action",),
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("gs://openpi-assets/checkpoints/pi05_base/params"),
+        freeze_filter=pi0_config.Pi0Config(
+            pi05=True,
+            action_horizon=50,
+            discrete_state_input=False,
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+        ).get_freeze_filter(),
+        ema_decay=None,
+        batch_size=4,
+        num_train_steps=30_000,
+    ),
+
     # Full fine-tuning variant of pi05_ur7e. Unlike pi05_ur7e, this leaves all
     # model parameters trainable and uses the non-LoRA model variants.
     TrainConfig(
-        name="pi05_ur7e_full",
+        name="pi05_ur7e_droid_full",
         model=pi0_config.Pi0Config(
             pi05=True,
             action_horizon=50,
@@ -659,6 +715,55 @@ _CONFIGS = [
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader(
             "gs://openpi-assets/checkpoints/pi05_droid/params"
+        ),
+        batch_size=1,
+        num_train_steps=10_000,
+    ),
+
+TrainConfig(
+        name="pi05_ur7e_base_full",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_horizon=50,
+            discrete_state_input=False,
+            paligemma_variant="gemma_2b",
+            action_expert_variant="gemma_300m",
+        ),
+        data=SimpleDataConfig(
+            repo_id="dataset0924",
+            data_transforms=lambda model: _transforms.Group(
+                inputs=[
+                    _transforms.DeltaActions(_transforms.make_bool_mask(6, -1)),
+                    ur7e_policy.UR7EInputs(model_type=model.model_type),
+                ],
+                outputs=[
+                    ur7e_policy.UR7EOutputs(),
+                    _transforms.AbsoluteActions(_transforms.make_bool_mask(6, -1)),
+                ],
+            ),
+            model_transforms=ModelTransformFactory(default_prompt="UR7E pick and place"),
+            base_config=DataConfig(
+                repack_transforms=_transforms.Group(
+                    inputs=[
+                        _transforms.RepackTransform(
+                            {
+                                "images": {
+                                    "cam_high": "observation.images.camera_0",
+                                    "cam_low": "observation.images.camera_1",
+                                },
+                                "state": "observation.state",
+                                "actions": "action",
+                                "prompt": "prompt",
+                            }
+                        )
+                    ]
+                ),
+                action_sequence_keys=("action",),
+                prompt_from_task=True,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "gs://openpi-assets/checkpoints/pi05_base/params"
         ),
         batch_size=1,
         num_train_steps=10_000,

@@ -3,21 +3,22 @@ set -euo pipefail
 
 # Run from the OpenPI repository root, regardless of the caller's directory.
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/qmc/openpi_data/checkpoints}"
 
 # Usage: ./run_pi05_training_background.sh [run_name] [resume|overwrite|fresh]
-CONFIG_NAME="${OPENPI_CONFIG:-pi05_ur7e_lora}"
+CONFIG_NAME="${OPENPI_CONFIG:-pi05_ur7e_base_lora}"
 RUN_NAME="${1:-dataset0924_50stp}"
 MODE="${2:-overwrite}"
 
 LOG_DIR="$PROJECT_ROOT/logs"
 LOG_FILE="$LOG_DIR/${CONFIG_NAME}_${RUN_NAME}.log"
 PID_FILE="$LOG_DIR/${CONFIG_NAME}_${RUN_NAME}.pid"
-CHECKPOINT_DIR="$PROJECT_ROOT/checkpoints/$CONFIG_NAME/$RUN_NAME"
+CHECKPOINT_DIR="$CHECKPOINT_ROOT/$CONFIG_NAME/$RUN_NAME"
 
-NUM_TRAIN_STEPS="${NUM_TRAIN_STEPS:-50000}"
+NUM_TRAIN_STEPS="${NUM_TRAIN_STEPS:-30000}"
 SAVE_INTERVAL="${SAVE_INTERVAL:-10000}"
 LOG_INTERVAL="${LOG_INTERVAL:-100}"
-NUM_WORKERS="${NUM_WORKERS:-2}"
+NUM_WORKERS="${NUM_WORKERS:-8}"
 
 case "$MODE" in
     resume|overwrite|fresh) ;;
@@ -39,24 +40,25 @@ if [[ -f "$PID_FILE" ]]; then
     rm -f "$PID_FILE"
 fi
 
-if [[ "$MODE" == "fresh" && -e "$CHECKPOINT_DIR" && \
-      -n "$(find "$CHECKPOINT_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
-    echo "Checkpoint directory is not empty: $CHECKPOINT_DIR" >&2
-    echo "Use 'overwrite' to delete this experiment, or choose another run name." >&2
+if [[ "$MODE" == "fresh" && -e "$CHECKPOINT_DIR" ]]; then
+    echo "Checkpoint directory already exists: $CHECKPOINT_DIR" >&2
+    echo "Choose another run name, or use 'overwrite' explicitly." >&2
     exit 2
 fi
 
-mkdir -p "$CHECKPOINT_DIR"
-
-extra_args=()
+extra_args=(--checkpoint-base-dir="$CHECKPOINT_ROOT")
 case "$MODE" in
     resume)
-        if [[ -n "$(find "$CHECKPOINT_DIR" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
+        if [[ -e "$CHECKPOINT_DIR" ]]; then
             extra_args+=(--resume)
         fi
         ;;
     overwrite)
         extra_args+=(--overwrite)
+        ;;
+    fresh)
+        # The directory was checked above and does not exist, so train.py will
+        # create it without needing --overwrite or --resume.
         ;;
 esac
 
