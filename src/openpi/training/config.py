@@ -624,7 +624,7 @@ TrainConfig(
             action_expert_variant="gemma_300m_lora",
         ),
         data=SimpleDataConfig(
-            repo_id="dataset0924",
+            repo_id="dataset1012",
             data_transforms=lambda model: _transforms.Group(
                 inputs=[
                     _transforms.DeltaActions(_transforms.make_bool_mask(6, -1)),

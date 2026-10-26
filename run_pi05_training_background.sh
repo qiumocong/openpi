@@ -7,7 +7,7 @@ CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/qmc/openpi_data/checkpoints}"
 
 # Usage: ./run_pi05_training_background.sh [run_name] [resume|overwrite|fresh]
 CONFIG_NAME="${OPENPI_CONFIG:-pi05_ur7e_base_lora}"
-RUN_NAME="${1:-dataset0924_50stp}"
+RUN_NAME="${1:-dataset1012_50stp}"
 MODE="${2:-overwrite}"
 
 LOG_DIR="$PROJECT_ROOT/logs"
