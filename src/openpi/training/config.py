@@ -28,7 +28,6 @@ import openpi.training.misc.polaris_config as polaris_config
 import openpi.training.misc.roboarena_config as roboarena_config
 import openpi.training.optimizer as _optimizer
 import openpi.training.weight_loaders as weight_loaders
-import openpi.training.vlash_config as vlash_config
 import openpi.transforms as _transforms
 
 ModelType: TypeAlias = _model.ModelType
@@ -91,8 +90,6 @@ class DataConfig:
 
     # If true, will use the LeRobot dataset task to define the prompt.
     prompt_from_task: bool = False
-    # Uniform temporal offsets in [0, N], applied before action normalization.
-    vlash_max_delay_steps: int = 0
 
     # Only used for RLDS data loader (ie currently only used for DROID).
     rlds_data_dir: str | None = None
@@ -627,7 +624,7 @@ TrainConfig(
             action_expert_variant="gemma_300m_lora",
         ),
         data=SimpleDataConfig(
-            repo_id="dataset0924",
+            repo_id="dataset1012",
             data_transforms=lambda model: _transforms.Group(
                 inputs=[
                     _transforms.DeltaActions(_transforms.make_bool_mask(6, -1)),
@@ -1179,8 +1176,6 @@ TrainConfig(
         wandb_enabled=False,
     ),
     # RoboArena & PolaRiS configs.
-    # Imported here to keep the UR7E VLASh recipe separate from upstream configs.
-    *vlash_config.get_configs(),
     *roboarena_config.get_roboarena_configs(),
     *polaris_config.get_polaris_configs(),
 ]

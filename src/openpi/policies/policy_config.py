@@ -1,6 +1,5 @@
 import logging
 import os
-import json
 import pathlib
 from typing import Any
 
@@ -45,21 +44,10 @@ def create_trained_policy(
     """
     repack_transforms = repack_transforms or transforms.Group()
     checkpoint_dir = download.maybe_download(str(checkpoint_dir))
-    metadata = dict(train_config.policy_metadata or {})
-    if getattr(train_config.model, "vlash_state_cond", False):
-        contract_path = checkpoint_dir / "assets" / "vlash.json"
-        if not contract_path.is_file():
-            raise ValueError("VLASh requires a delay-trained checkpoint with assets/vlash.json; ordinary checkpoints are not compatible")
-        contract = json.loads(contract_path.read_text())
-        if contract.get("state_source") != "future_absolute_action" or int(contract.get("max_delay_steps", 0)) < 1:
-            raise ValueError("Unsupported VLASh checkpoint contract")
-        metadata["vlash_max_delay_steps"] = int(contract["max_delay_steps"])
 
     # Check if this is a PyTorch model by looking for model.safetensors
     weight_path = os.path.join(checkpoint_dir, "model.safetensors")
     is_pytorch = os.path.exists(weight_path)
-    if is_pytorch and getattr(train_config.model, "vlash_state_cond", False):
-        raise ValueError("This OpenPI VLASh deployment supports JAX checkpoints only")
 
     logging.info("Loading model...")
     if is_pytorch:
@@ -100,7 +88,7 @@ def create_trained_policy(
             *repack_transforms.outputs,
         ],
         sample_kwargs=sample_kwargs,
-        metadata=metadata,
+        metadata=train_config.policy_metadata,
         is_pytorch=is_pytorch,
         pytorch_device=pytorch_device if is_pytorch else None,
     )
