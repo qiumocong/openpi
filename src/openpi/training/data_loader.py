@@ -138,13 +138,21 @@ def create_torch_dataset(
         return FakeDataset(model_config, num_samples=1024)
 
     dataset_meta = lerobot_dataset.LeRobotDatasetMetadata(repo_id)
+    delay = data_config.vlash_max_delay_steps
+    if delay < 0:
+        raise ValueError('vlash_max_delay_steps must be nonnegative')
     dataset = lerobot_dataset.LeRobotDataset(
         data_config.repo_id,
         delta_timestamps={
-            key: [t / dataset_meta.fps for t in range(action_horizon)] for key in data_config.action_sequence_keys
+            key: [t / dataset_meta.fps for t in range(action_horizon + delay)] for key in data_config.action_sequence_keys
         },
         video_backend="pyav",
     )
+
+    if delay:
+        from openpi.training.vlash_dataset import DelayedActionDataset
+
+        dataset = DelayedActionDataset(dataset, action_horizon, delay, data_config.action_sequence_keys)
 
     if data_config.prompt_from_task:
         dataset = TransformedDataset(dataset, [_transforms.PromptFromLeRobotTask(dataset_meta.tasks)])

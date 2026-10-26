@@ -67,6 +67,7 @@ class Pi0(_model.BaseModel):
     def __init__(self, config: pi0_config.Pi0Config, rngs: nnx.Rngs):
         super().__init__(config.action_dim, config.action_horizon, config.max_token_len)
         self.pi05 = config.pi05
+        self.vlash_state_cond = config.vlash_state_cond
         paligemma_config = _gemma.get_config(config.paligemma_variant)
         action_expert_config = _gemma.get_config(config.action_expert_variant)
         # TODO: rewrite gemma in NNX. For now, use bridge.
@@ -93,6 +94,13 @@ class Pi0(_model.BaseModel):
         if config.pi05:
             self.time_mlp_in = nnx.Linear(action_expert_config.width, action_expert_config.width, rngs=rngs)
             self.time_mlp_out = nnx.Linear(action_expert_config.width, action_expert_config.width, rngs=rngs)
+            if self.vlash_state_cond:
+                self.state_proj = nnx.Linear(config.action_dim, action_expert_config.width, rngs=rngs)
+                self.state_mlp_in = nnx.Linear(action_expert_config.width, action_expert_config.width, rngs=rngs)
+                self.state_mlp_out = nnx.Linear(
+                    action_expert_config.width, action_expert_config.width,
+                    kernel_init=nnx.initializers.zeros, bias_init=nnx.initializers.zeros, rngs=rngs,
+                )
         else:
             self.state_proj = nnx.Linear(config.action_dim, action_expert_config.width, rngs=rngs)
             self.action_time_mlp_in = nnx.Linear(2 * action_expert_config.width, action_expert_config.width, rngs=rngs)
@@ -167,6 +175,9 @@ class Pi0(_model.BaseModel):
             time_emb = nnx.swish(time_emb)
             action_expert_tokens = action_tokens
             adarms_cond = time_emb
+            if self.vlash_state_cond:
+                state_emb = nnx.swish(self.state_mlp_in(self.state_proj(obs.state)))
+                adarms_cond = adarms_cond + nnx.swish(self.state_mlp_out(state_emb))
         else:
             # mix timestep + action information using an MLP (no adaRMS)
             time_tokens = einops.repeat(time_emb, "b emb -> b s emb", s=self.action_horizon)
@@ -211,7 +222,12 @@ class Pi0(_model.BaseModel):
         )
         v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
 
-        return jnp.mean(jnp.square(v_t - u_t), axis=-1)
+        loss = jnp.mean(jnp.square(v_t - u_t), axis=-1)
+        if observation.action_loss_mask is not None:
+            mask = observation.action_loss_mask.astype(loss.dtype)
+            # The trainer averages all horizon positions, including padding.
+            loss = loss * mask * (self.action_horizon / jnp.maximum(mask.sum(axis=-1, keepdims=True), 1))
+        return loss
 
     @override
     def sample_actions(

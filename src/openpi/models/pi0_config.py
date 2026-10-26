@@ -29,12 +29,18 @@ class Pi0Config(_model.BaseModelConfig):
     # - the state input is part of the discrete language tokens rather than a continuous input that is part of the suffix
     # - the action expert uses adaRMSNorm to inject the flow matching timestep
     pi05: bool = False
+    # VLASh future-state conditioning; requires delay-augmented fine-tuning.
+    vlash_state_cond: bool = False
     # This config option is not used directly by the model, but it is read by the ModelTransformFactory.
     discrete_state_input: bool = None  # type: ignore
 
     pytorch_compile_mode: str | None = "max-autotune"
 
     def __post_init__(self):
+        if self.vlash_state_cond and not self.pi05:
+            raise ValueError("VLASh state conditioning is supported only for pi05")
+        if self.vlash_state_cond and self.discrete_state_input is not False:
+            raise ValueError("VLASh requires discrete_state_input=False; state belongs in the action expert")
         if self.max_token_len is None:
             object.__setattr__(self, "max_token_len", 200 if self.pi05 else 48)
         if self.discrete_state_input is None:

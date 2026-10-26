@@ -4,6 +4,7 @@ import asyncio
 import concurrent.futures as futures
 import dataclasses
 import logging
+import json
 from typing import Protocol
 
 from etils import epath
@@ -74,6 +75,11 @@ def save_state(
         norm_stats = data_config.norm_stats
         if norm_stats is not None and data_config.asset_id is not None:
             _normalize.save(directory / data_config.asset_id, norm_stats)
+        if data_config.vlash_max_delay_steps:
+            (directory / "vlash.json").write_text(json.dumps({
+                "version": 1, "max_delay_steps": data_config.vlash_max_delay_steps,
+                "state_source": "future_absolute_action",
+            }))
 
     # Split params that can be used for inference into a separate item.
     with at.disable_typechecking():
