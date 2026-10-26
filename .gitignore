@@ -168,3 +168,8 @@ cython_debug/
 #.idea/
 
 dataset0924/
+
+# Local training resources and process output.
+.local/
+/logs/
+/.vla_openpi_server.pid
