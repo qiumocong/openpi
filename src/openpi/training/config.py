@@ -1180,6 +1180,16 @@ TrainConfig(
     *polaris_config.get_polaris_configs(),
 ]
 
+# Keep the original UR7E config available and register a dataset-specific copy.
+_tube1102_base = next(config for config in _CONFIGS if config.name == "pi05_ur7e_base_lora")
+_CONFIGS.append(
+    dataclasses.replace(
+        _tube1102_base,
+        name="pi05_ur7e_tube1102_lora",
+        data=dataclasses.replace(_tube1102_base.data, repo_id="dataset_tube_1102"),
+    )
+)
+
 if len({config.name for config in _CONFIGS}) != len(_CONFIGS):
     raise ValueError("Config names must be unique.")
 _CONFIGS_DICT = {config.name: config for config in _CONFIGS}
