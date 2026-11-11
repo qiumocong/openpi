@@ -1186,7 +1186,7 @@ _CONFIGS.append(
     dataclasses.replace(
         _tube1102_base,
         name="pi05_ur7e_tube1102_lora",
-        data=dataclasses.replace(_tube1102_base.data, repo_id="dataset_tube_1102"),
+        data=dataclasses.replace(_tube1102_base.data, repo_id="dataset_tube"),
     )
 )
 
