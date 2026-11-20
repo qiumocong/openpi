@@ -1189,6 +1189,30 @@ _CONFIGS.append(
         data=dataclasses.replace(_tube1102_base.data, repo_id="dataset_tube"),
     )
 )
+_CONFIGS.append(
+    dataclasses.replace(
+        _tube1102_base,
+        name="pi05_ur7e_tube_colors_lora",
+        data=dataclasses.replace(_tube1102_base.data, repo_id="pap_tube_blue_green"),
+    )
+)
+
+# Independent run for synchronized 2x frame decimation at the original 30 FPS.
+_CONFIGS.append(
+    dataclasses.replace(
+        _tube1102_base,
+        name="pi05_ur7e_blue_green_sync_speed2x_lora",
+        data=dataclasses.replace(_tube1102_base.data, repo_id="pap_blue_and_green_sync_speed2x"),
+    )
+)
+
+_CONFIGS.append(
+    dataclasses.replace(
+        _tube1102_base,
+        name="pi05_ur7e_blue_green_add_sync_speed2x_lora",
+        data=dataclasses.replace(_tube1102_base.data, repo_id="pap_tube_blue_green_add_sync_speed2x"),
+    )
+)
 
 if len({config.name for config in _CONFIGS}) != len(_CONFIGS):
     raise ValueError("Config names must be unique.")

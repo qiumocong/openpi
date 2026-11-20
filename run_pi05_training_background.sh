@@ -12,7 +12,7 @@ else
     RESOURCE_ROOT="$PROJECT_ROOT/.local"
 fi
 ASSETS_BASE_DIR="${OPENPI_ASSETS_BASE_DIR:-$RESOURCE_ROOT/openpi/assets}"
-export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$RESOURCE_ROOT/datasets}"
+export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$RESOURCE_ROOT/datasets_openpi_v21}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 export HF_DATASETS_OFFLINE="${HF_DATASETS_OFFLINE:-1}"
 CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/data/qmc/openpi_data/checkpoints}"
@@ -58,7 +58,7 @@ info = dataset / "meta/info.json"
 if not info.is_file():
     raise SystemExit(
         f"Local dataset metadata is missing: {info}\n"
-        "Place the dataset in VLA/.local/datasets/<repo_id>, or set HF_LEROBOT_HOME to its parent."
+        "Place the converted dataset in VLA/.local/datasets_openpi_v21/<repo_id>, or set HF_LEROBOT_HOME to its parent."
     )
 json.loads(info.read_text())
 asset_id = config.data.assets.asset_id or repo_id
@@ -111,7 +111,12 @@ esac
 export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.9}"
 export PYTHONUNBUFFERED=1
 
-nohup uv run --no-sync scripts/train.py "$CONFIG_NAME" \
+# Allow a dedicated wrapper to bypass the uv launcher for the long-lived process.
+training_command=(uv run --no-sync scripts/train.py)
+if [[ -n "${OPENPI_TRAIN_PYTHON:-}" ]]; then
+    training_command=("$OPENPI_TRAIN_PYTHON" -u -X faulthandler scripts/train.py)
+fi
+nohup "${training_command[@]}" "$CONFIG_NAME" \
     --exp-name="$RUN_NAME" \
     --num-train-steps="$NUM_TRAIN_STEPS" \
     --save-interval="$SAVE_INTERVAL" \
